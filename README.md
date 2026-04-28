@@ -1,15 +1,17 @@
 # WireSentinel Client
 
 ## Estrutura
-- [ ] Criar estrutura inicial do projeto
+- [x] Criar estrutura inicial do projeto
 - [ ] Configurar build (Makefile)
 
 ## Captura
 - [ ] Abrir socket RAW
-- [ ] Capturar pacotes da interface
-- [ ] Parsing de IP
-- [ ] Parsing de UDP
-- [ ] Parsing de TCP
+- [x] Capturar pacotes da interface
+- [x] Parsing de IPV4
+- [x] Parsing de IPV6
+- [x] Parsing de ARP
+- [x] Parsing de UDP
+- [x] Parsing de TCP
 
 ## Extração de dados
 - [ ] Extrair domínio via DNS
@@ -18,7 +20,7 @@
 - [ ] Ignorar payload irrelevante
 
 ## Eventos
-- [ ] Criar struct de evento
+- [x] Criar struct de evento
 - [ ] Adicionar timestamp
 - [ ] Adicionar identificação da máquina
 
@@ -44,8 +46,3 @@
 - [ ] Tratar falhas de conexão
 - [ ] Implementar retry simples
 - [ ] Implementar política de descarte
-
-## Observabilidade
-- [ ] Adicionar logs básicos
-- [ ] Medir uso de memória
-- [ ] Medir uso de CPU
