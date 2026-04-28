@@ -5,7 +5,7 @@
 - [ ] Configurar build (Makefile)
 
 ## Captura
-- [ ] Abrir socket RAW
+- [x] Abrir socket RAW
 - [x] Capturar pacotes da interface
 - [x] Parsing de IPV4
 - [x] Parsing de IPV6
@@ -15,13 +15,13 @@
 
 ## Extração de dados
 - [ ] Extrair domínio via DNS
-- [ ] Extrair Host (HTTP)
+- [x] Extrair Host (HTTP)
 - [ ] Extrair SNI (TLS)
-- [ ] Ignorar payload irrelevante
+- [x] Ignorar payload irrelevante
 
 ## Eventos
 - [x] Criar struct de evento
-- [ ] Adicionar timestamp
+- [x] Adicionar timestamp
 - [ ] Adicionar identificação da máquina
 
 ## Buffer
@@ -31,9 +31,9 @@
 - [ ] Implementar descarte seguro
 
 ## Serialização
-- [ ] Criar JSON manual
-- [ ] Garantir escaping correto
-- [ ] Estruturar payload em lote
+- [x] Criar JSON manual
+- [x] Garantir escaping correto
+- [x] Estruturar payload em lote
 
 ## Comunicação
 - [ ] Criar cliente HTTP com socket
