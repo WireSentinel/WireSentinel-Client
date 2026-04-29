@@ -36,13 +36,13 @@
 - [x] Estruturar payload em lote
 
 ## Comunicação
-- [ ] Criar cliente HTTP com socket
-- [ ] Montar requisição POST
-- [ ] Adicionar headers HTTP
-- [ ] Enviar dados ao servidor
+- [x] Criar cliente HTTP com socket
+- [x] Montar requisição POST
+- [x] Adicionar headers HTTP
+- [x] Enviar dados ao servidor
 - [ ] Ler resposta do backend
 
 ## Resiliência
-- [ ] Tratar falhas de conexão
-- [ ] Implementar retry simples
+- [x] Tratar falhas de conexão
+- [x] Implementar retry simples
 - [ ] Implementar política de descarte
