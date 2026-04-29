@@ -37,12 +37,12 @@ int create_security_file(char* key, char* url, char* port){
     FILE *fl = fopen(path,"w");
     
     snprintf(buffer, 2048, 
-        "SHRD_SCRT=%s"
-        "URL=%s"
-        "PORT=%s",
+        "SHRD_SCRT=%s\n"
+        "URL=%s\n"
+        "PORT=%s\n",
         key, url, port);
     fputs(buffer, fl);
-    rewind(fl);
+    //rewind(fl);
     fclose(fl);
     return 0;
 }
@@ -113,30 +113,35 @@ int file_greeter(){
         
         printf("Arquivo de configuracao detectado, url: [ %s:%s ]\nKey: %s\ndeseja prosseguir com o link? (S/n)\n-> ",url, port, key);
         awsr = fgetc(stdin);
-        fgets(key, 255, stdin);
         if (awsr =='n' || awsr =='N') {
             cond_break_loop = 1;
+            
         }
         else{
+            cond_break_loop = create_security_file(key, url, port);
             cond_break_loop = 0;
         }
-        free(key);
-        free(url);
-        free(port);
+        if (awsr != '\n'){
+            getchar();
+        }
+
+        //free(key);
+        //free(url);
+        //free(port);
     }
     else{
         cond_break_loop = 1;
     }
     while (cond_break_loop){
         printf("Digite a Chave Compartilhada (lenght < 256)\n-> ");
-        fgets(key_stack, 256, stdin);
-        //key[strlen(key_stack)]='\0';
+        fgets(key_stack, 255, stdin);
+        key_stack[strcspn(key_stack, "\n")] = '\0'; // Remove newline character
         printf("Digite a URL\n-> ");
-        fgets(url_stack, 80, stdin);
-        //url[strlen(url_stack)]='\0';
+        fgets(url_stack, 79, stdin);
+        url_stack[strcspn(url_stack, "\n")] = '\0'; // Remove newline character
         printf("Digite a Porta\n-> ");
-        fgets(port_stack, 10, stdin);
-        //port[strlen(port_stack)]='\0';
+        fgets(port_stack, 9, stdin);
+        port_stack[strcspn(port_stack, "\n")] = '\0'; // Remove newline character
 
         cond_break_loop = create_security_file(key_stack, url_stack, port_stack);
         if (cond_break_loop == 0) break;
@@ -154,3 +159,4 @@ int file_greeter(){
     }
     return 0;
 }
+

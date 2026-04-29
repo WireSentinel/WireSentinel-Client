@@ -27,8 +27,8 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
             "      \"tempo_vida\": %d, \n"
             "      \"ip_header_length\": %d,\n"
             "      \"tamanho_total_packet\": %d,\n"
-            "      \"porta_origem\": \"%s\",\n"
-            "      \"porta_destino\": \"%s\",\n"
+            "      \"porta_origem\": %s,\n"
+            "      \"porta_destino\": %s,\n"
             "      \"seq\": %ld,\n"
             "      \"ack_seq\": %ld,\n"
             "      \"ack\": %d,\n"
@@ -78,4 +78,19 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
             "\n  ]\n"
             "}\n");
         
+}
+void generate_json_header(char* host, long int content_length, char* buffer[]){
+    snprintf(*buffer, 2048,
+        "POST /ingest HTTP/1.1\n"
+        "Host: %s\n"
+        "Content-Type: application/json\n"
+        "Content-Length: %ld\n"
+        "User-Agent: WireSentinel-Agent/1.0\n\n",
+        host, content_length);
+}
+void generate_request(char* host, char* json_payload, char* buffer[]){
+    char *header = malloc(sizeof(char)*2048);
+    generate_json_header(host, strlen(json_payload), &header);
+    snprintf(*buffer, MAX_JSON_SIZE, "%s%s", header, json_payload);
+    free(header);
 }
