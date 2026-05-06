@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include "misc.h"
 #include "packet_service.h"
 #include "server.h"
