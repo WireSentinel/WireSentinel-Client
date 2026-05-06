@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include "packet.h"
 
-void insert_packet_node_on_list(PacketList **inicio, PacketList **final, InternetPacket **pkt){
+void insert_packet_node_on_list(PacketList **inicio, PacketList **final, FullInternetPacket **pkt){
     PacketList *new_node = (PacketList*)malloc(sizeof(PacketList));
     new_node->packet = *pkt;
     new_node->next = NULL;

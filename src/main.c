@@ -19,7 +19,7 @@
 #include "security.h"
 #include "jsonparser.h"
 
-#define MAX_ITENS 10 
+#define MAX_ITENS 10
 #define MAX_SIZE 64
 
 int curr_index = 0;
@@ -43,7 +43,7 @@ int main(){
     }
     while(1){
         if (recvfrom(socketfd,buffer,sizeof(buffer),0,NULL,NULL)>0){
-            InternetPacket *packetNode = fill_fullPacket_node(buffer);
+            FullInternetPacket *packetNode = fill_fullPacket_node(buffer);
             insert_packet_node_on_list(&inicio, &final, &packetNode);            
             curr_index++;
         }

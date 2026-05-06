@@ -19,7 +19,6 @@ void start_server(int *socketfd){
     memset(&socketConfig, 0, sizeof(socketConfig));
     
     struct addrinfo *socketList;
-    int status_init, socket_cliente;
     char *address,*port, time[MAX_SIZE];
 
     socketConfig.ai_family = AF_INET;
@@ -28,7 +27,7 @@ void start_server(int *socketfd){
 
     get_file_url(&address);
     get_file_prt(&port); 
-    status_init = getaddrinfo(address, port, &socketConfig, &socketList);
+    getaddrinfo(address, port, &socketConfig, &socketList);
     *socketfd   = socket(socketList->ai_family,socketList->ai_socktype,socketList->ai_protocol);
     while (connect(*socketfd, socketList->ai_addr, socketList->ai_addrlen) != 0){
         get_time(time, MAX_SIZE);

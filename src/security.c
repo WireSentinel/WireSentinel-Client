@@ -47,6 +47,7 @@ int create_security_file(char* key, char* url, char* port){
     return 0;
 }
 
+
 int confirm_if_file_exists(){
     char* path;
     get_file_path(&path);
