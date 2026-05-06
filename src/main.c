@@ -1,13 +1,3 @@
-#include <netinet/ether.h>
-#include <netinet/ip.h>
-#include <linux/if_arp.h>
-#include <netinet/ip6.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <netinet/ip_icmp.h>
-#include <arpa/inet.h>
-#include <linux/if_packet.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +24,7 @@ int main(){
     PacketList *inicio = NULL;
     PacketList *final = NULL;
     file_greeter();
-    int socketfd = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL));
+    int socketfd = socket(AF_PACKET,SOCK_RAW,0x0300);
     int socketfd_server;
     start_server(&socketfd_server);
     if (socketfd < 0) {

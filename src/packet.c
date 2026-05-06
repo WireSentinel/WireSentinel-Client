@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include "packet.h"
 
 void insert_packet_node_on_list(PacketList **inicio, PacketList **final, FullInternetPacket **pkt){
