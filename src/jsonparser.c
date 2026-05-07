@@ -3,37 +3,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "misc.h"
+#include "security.h"
+#include "services_table.h"
+
+#define HMAC_SHA256_SIZE 32
+
 
 
 
 void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
     PacketList *inicio = original_inicio;
     char temporary_buffer[2048];
+    char buffer_aplicacao[256];
     memset(*buffer, 0, MAX_JSON_SIZE);
+    memset(buffer_aplicacao, 0, 256);
     strcat(*buffer, 
             "{\n"
             "  \"packets\": [\n");
     while (inicio!=NULL){
-        /*
-                    case 1:
-                cond_break_loop=0;
-                node->protocolo_transporte = 1;//"ICMP";    
-                break;
-        
-            case 5:
-                cond_break_loop=0;
-                node->protocolo_transporte = 5;//"STREA");
-                break;
-            case 6:
-                cond_break_loop=0;
-                node->protocolo_transporte = 6;//"TCP")
-                break;
-            case 17:
-                cond_break_loop=0;
-                node->protocolo_transporte = 17;//"UDP")
-                break;
-            case 58 icmpv6
-        */
         FullInternetPacket *pkt = (inicio)->packet;
         memset(temporary_buffer, 0, 2048);
         snprintf(temporary_buffer, 2048,
@@ -79,23 +67,44 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
         (pkt->tcp_urg)? strcat(temporary_buffer, "      \"tcp_urg\": true,\n") : strcat(temporary_buffer, "      \"tcp_urg\": false,\n" );
         (pkt->tcp_cwr)? strcat(temporary_buffer, "      \"tcp_cwr\": true,\n") : strcat(temporary_buffer, "      \"tcp_cwr\": false,\n" );
         (pkt->tcp_ece)? strcat(temporary_buffer, "      \"tcp_ece\": true,\n") : strcat(temporary_buffer, "      \"tcp_ece\": false,\n" );
-        
         switch (pkt->protocolo_transporte)//
         {
         case 1:
             strcat(temporary_buffer, "      \"protocolo_transporte\": \"ICMP\"\n");
             break;
-        
         case 5:
             strcat(temporary_buffer, "      \"protocolo_transporte\": \"STREAM\"\n");
             break;
-        
         case 6:
-            strcat(temporary_buffer, "      \"protocolo_transporte\": \"TCP\"\n");
-            break;
-        
+            strcat(temporary_buffer, "      \"protocolo_transporte\": \"TCP\",\n");
+            memset(buffer_aplicacao, 0, 256);
+            if (pkt->porta_destino > 0 && app_tcp_services[pkt->porta_destino]!= NULL){
+                snprintf(buffer_aplicacao,256,"      \"protocolo_aplicacao\": \"%s\"\n",app_tcp_services[pkt->porta_destino]);    
+                strcat(temporary_buffer, buffer_aplicacao);
+            }
+            else if (pkt->porta_origem > 0 && app_tcp_services[pkt->porta_origem]!= NULL){
+                snprintf(buffer_aplicacao,256,"      \"protocolo_aplicacao\": \"%s\"\n",app_tcp_services[pkt->porta_origem]);    
+                strcat(temporary_buffer, buffer_aplicacao);
+            }
+            else{
+                strcat(temporary_buffer, "      \"protocolo_aplicacao\": \"Unknown/None\"\n");    
+            }
+            break;    
         case 17:
-            strcat(temporary_buffer, "      \"protocolo_transporte\": \"UDP\"\n");
+            strcat(temporary_buffer, "      \"protocolo_transporte\": \"UDP\",\n");
+            memset(buffer_aplicacao, 0, 256);
+            if (pkt->porta_destino > 0 && app_udp_services[pkt->porta_destino]!= NULL){
+                snprintf(buffer_aplicacao,256,"      \"protocolo_aplicacao\": \"%s\"\n",app_udp_services[pkt->porta_destino]);    
+                strcat(temporary_buffer, buffer_aplicacao);
+            }
+            
+            else if (pkt->porta_origem > 0 && app_udp_services[pkt->porta_origem]!= NULL){
+                snprintf(buffer_aplicacao,256,"      \"protocolo_aplicacao\": \"%s\"\n",app_udp_services[pkt->porta_origem]);    
+                strcat(temporary_buffer, buffer_aplicacao);
+            }
+            else{
+                strcat(temporary_buffer, "      \"protocolo_aplicacao\": \"Unknown/None\"\n");    
+            }
             break;
         
         case 58:
@@ -103,11 +112,11 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
             break;
         
         case -1:
-            strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unkown/None\"\n");
+            strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unknown/None\"\n");
             break;
         
         default:
-            strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unkown/None\"\n");
+            strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unknown/None\"\n");
             break;
         }                
         strcat(temporary_buffer, "    }");
@@ -123,13 +132,31 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
         
 }
 void generate_json_header(char* host, long int content_length, char* buffer[]){
+    char time[30], *key;
+    
+    get_time(time, 30);
+    get_file_key(&key);
+    char json[512];
+    unsigned char digest[HMAC_SHA256_SIZE];
+    unsigned int digest_len = 0;
+    snprintf(json, 512, "{\r\n  X-WireSentinel-Timestamp: %s,\r\n  Length: %ld\r\n}", time, content_length);
+    HMAC(EVP_sha256(), key, (int)strlen(key), (const unsigned char *) json, (int)strlen(json), digest,&digest_len);
+    char digest_hex[65];
+    for (int i = 0; i < 32; i++) {
+        sprintf(&digest_hex[i * 2], "%02x", digest[i]);
+    }
+    digest_hex[64] = '\0';
     snprintf(*buffer, 2048,
         "POST /ingest HTTP/1.1\r\n"
         "Host: %s\r\n"
         "Content-Type: application/json\r\n"
         "Content-Length: %ld\r\n"
+        "X-WireSentinel-Timestamp: %s\r\n"
+        "X-WireSentinel-Credential: \"%s\"\r\n"
         "User-Agent: WireSentinel-Agent/1.0\r\n\r\n",
-        host, content_length);
+        host, content_length, time, digest_hex
+    );
+    //printf("Generated JSON:\n%s\nGenerated HMAC: %s\nKey: %s\n", json, digest_hex, key);
 }
 void generate_request(char* host, char* json_payload, char* buffer[]){
     char *header = malloc(sizeof(char)*2048);

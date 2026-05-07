@@ -264,6 +264,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
 
         case ETH_P_8021Q:
             strcpy(packetNode->protocolo_ip, "VLAN (802.1)");
+            //TODO: implementar parsing de vlan
             define_protocol = 5;
             strcpy(packetNode->ip_origem, "Null");
             strcpy(packetNode->ip_destino, "Null");
