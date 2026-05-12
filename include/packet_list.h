@@ -7,7 +7,11 @@
 #define PACKET_H
 #define MAX_SIZE 64
 
+/**
+ *
+ */
 typedef struct{
+    unsigned char is_vlan;
     unsigned char tcp_cwr;
     unsigned char tcp_ece;
     unsigned char tcp_ack;
@@ -25,8 +29,8 @@ typedef struct{
     char ip_origem[MAX_SIZE];
     char ip_destino[MAX_SIZE];
     int tempo_vida; // tempo de vida restante do packet, basicamente pra ver quantos roteadores que o pacote passou
-    int ip_header_lenght; // ip->ihl*4
-    int tamanho_total_packet;      // ip->tot_len
+    int total_header_lenght; // ip->ihl*4
+    long int tamanho_total_packet;      // recv - total_header_len
     //camada de Transferencia
     int porta_origem;
     int porta_destino;
@@ -49,6 +53,7 @@ typedef struct PacketList{
     struct PacketList *next;
 } PacketList;
 
-void insert_packet_node_on_list(PacketList **inicio, PacketList **final, FullInternetPacket **pkt);
-void free_list(PacketList **inicio);
+void insert_packet_node_on_list(PacketList **inicio, PacketList **final, FullInternetPacket **pkt, int *packet_nmbr);
+void free_list(PacketList **inicio, int *packet_nmbr);
+void free_packet(PacketList **inicio, int *itens_quantity) ;
 #endif

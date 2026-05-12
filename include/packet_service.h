@@ -2,7 +2,7 @@
 #define PACKET_PARSER_H
 
 #include <stdint.h>
-#include "packet.h"
+#include "packet_list.h"
 /*
  * IEEE 802.3 Ethernet constants
  * Tamanhos do header Ethernet
@@ -43,13 +43,13 @@ int fill_udp(unsigned char *buffer, int offset, FullInternetPacket* node);
 /*
  * Parsing da camada de rede (Layer 3)
  */
-void fill_ipv4(unsigned char *buffer, FullInternetPacket* node);
-void fill_ipv6(unsigned char *buffer, FullInternetPacket* node);
+void fill_ipv4(unsigned char *buffer, FullInternetPacket* node,int offset_ethernet);
+void fill_ipv6(unsigned char *buffer, FullInternetPacket* node,int offset_ethernet);
 
 /*
  * Função principal do parser
  * Recebe buffer bruto e retorna struct preenchida
  */
-FullInternetPacket* fill_fullPacket_node(unsigned char *buffer);
+FullInternetPacket* fill_fullPacket_node(unsigned char *buffer, long int recvlen);
 
 #endif

@@ -1,5 +1,5 @@
 #include "jsonparser.h"
-#include "packet.h"
+#include "packet_list.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,15 +26,15 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
         memset(temporary_buffer, 0, 2048);
         snprintf(temporary_buffer, 2048,
             "    {\n"
-            "      \"timestamp\": \"%s\",\n"         
+            "      \"timestamp\": \"%s\",\n"
             "      \"mac_origem\": \"%s\",\n"
             "      \"mac_destino\": \"%s\",\n"
             "      \"protocolo_ip\": \"%s\",\n"
             "      \"ip_origem\": \"%s\",\n"
             "      \"ip_destino\": \"%s\",\n"
             "      \"tempo_vida\": %d, \n"
-            "      \"ip_header_length\": %d,\n"
-            "      \"tamanho_total_packet\": %d,\n"
+            "      \"full_header_length\": %d,\n"
+            "      \"full_packet_lenght\": %ld,\n"
             "      \"porta_origem\": %d,\n"
             "      \"porta_destino\": %d,\n"
             "      \"tcp_seq\": %ld,\n"
@@ -50,7 +50,7 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
             pkt->ip_origem,
             pkt->ip_destino,
             pkt->tempo_vida,
-            pkt->ip_header_lenght,
+            pkt->total_header_lenght,
             pkt->tamanho_total_packet,
     
             // transporte
@@ -67,6 +67,7 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
         (pkt->tcp_urg)? strcat(temporary_buffer, "      \"tcp_urg\": true,\n") : strcat(temporary_buffer, "      \"tcp_urg\": false,\n" );
         (pkt->tcp_cwr)? strcat(temporary_buffer, "      \"tcp_cwr\": true,\n") : strcat(temporary_buffer, "      \"tcp_cwr\": false,\n" );
         (pkt->tcp_ece)? strcat(temporary_buffer, "      \"tcp_ece\": true,\n") : strcat(temporary_buffer, "      \"tcp_ece\": false,\n" );
+        (pkt->is_vlan)? strcat(temporary_buffer, "      \"is_vlan\": true,\n") : strcat(temporary_buffer, "      \"is_vlan\": false,\n" );
         switch (pkt->protocolo_transporte)//
         {
         case 1:
@@ -110,11 +111,7 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
         case 58:
             strcat(temporary_buffer, "      \"protocolo_transporte\": \"ICMPv6\"\n");
             break;
-        
-        case -1:
-            strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unknown/None\"\n");
-            break;
-        
+
         default:
             strcat(temporary_buffer, "      \"protocolo_transporte\": \"Unknown/None\"\n");
             break;
@@ -131,7 +128,7 @@ void generate_json_payload(PacketList *original_inicio, char *buffer[]) {
             "}\n");
         
 }
-void generate_json_header(char* host, long int content_length, char* buffer[]){
+void generate_json_header(char* host, const unsigned long int content_length, char* buffer[]){
     char time[30], *key;
     
     get_time(time, 30);
@@ -156,6 +153,7 @@ void generate_json_header(char* host, long int content_length, char* buffer[]){
         "User-Agent: WireSentinel-Agent/1.0\r\n\r\n",
         host, content_length, time, digest_hex
     );
+    free(key);
     //printf("Generated JSON:\n%s\nGenerated HMAC: %s\nKey: %s\n", json, digest_hex, key);
 }
 void generate_request(char* host, char* json_payload, char* buffer[]){

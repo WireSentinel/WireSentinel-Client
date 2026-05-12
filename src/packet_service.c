@@ -4,8 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include "misc.h"
-#include "server.h"
-#include "packet.h"
+#include "packet_list.h"
 #include "security.h"
 #include "jsonparser.h"
 #include "packet_service.h"
@@ -17,7 +16,7 @@ void init_packet(FullInternetPacket *p) {
     strcpy(p->ip_destino, "Null");
     p->protocolo_transporte = -1;
     p->tempo_vida = 0;
-    p->ip_header_lenght = 0;
+    p->total_header_lenght = 0;
     p->tamanho_total_packet = 0;
 
     // camada transporte
@@ -63,33 +62,32 @@ int fill_udp(unsigned char *buffer, int offset, FullInternetPacket* node){
     int dest_port = (((uint16_t)buffer[offset+2])<<8 | buffer[offset+3]);
     node->porta_destino = dest_port;
     node->porta_origem = source_port;
-    int lenght = 8;
-    return lenght;
+    return 8;
 }
 
-void fill_ipv6(unsigned char *buffer, FullInternetPacket* node){
-    int payload_lenght = ((((uint16_t)buffer[ETH_HLEN + 4]) << 8) | buffer[ETH_HLEN+5]);
-    int ttl = buffer[ETH_HLEN+7];
-    int protocolo = buffer[ETH_HLEN+6];
+void fill_ipv6(unsigned char *buffer, FullInternetPacket* node, int offset_ethernet){
+    //int payload_lenght = ((((uint16_t)buffer[offset_ethernet + 4]) << 8) | buffer[offset_ethernet+5]);
+    int ttl = buffer[offset_ethernet+7];
+    int protocolo = buffer[offset_ethernet+6];
     unsigned char ip_source_raw[16];
     for (int i = 0; i < 16; i++){
-        ip_source_raw[i] = buffer[ETH_HLEN + 8 + i];
+        ip_source_raw[i] = buffer[offset_ethernet + 8 + i];
     }
     char ip_source[64];
     snprintf(ip_source, 64, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", ip_source_raw[0],ip_source_raw[1],ip_source_raw[2],ip_source_raw[3],ip_source_raw[4],ip_source_raw[5],ip_source_raw[6],ip_source_raw[7],ip_source_raw[8],ip_source_raw[9],ip_source_raw[10],ip_source_raw[11],ip_source_raw[12],ip_source_raw[13],ip_source_raw[14],ip_source_raw[15]);
     strcpy(node->ip_origem, ip_source);
     unsigned char ip_dest_raw[16];
     for (int i = 0; i < 16; i++){
-        ip_dest_raw[i] = buffer[ETH_HLEN + 24 + i];
+        ip_dest_raw[i] = buffer[offset_ethernet + 24 + i];
     }
     char ip_dest[64];
     snprintf(ip_dest, 64, "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", ip_dest_raw[0],ip_dest_raw[1],ip_dest_raw[2],ip_dest_raw[3],ip_dest_raw[4],ip_dest_raw[5],ip_dest_raw[6],ip_dest_raw[7],ip_dest_raw[8],ip_dest_raw[9],ip_dest_raw[10],ip_dest_raw[11],ip_dest_raw[12],ip_dest_raw[13],ip_dest_raw[14],ip_dest_raw[15]);
     strcpy(node->ip_destino, ip_dest);
-    node->ip_header_lenght = 40;
-    node->tamanho_total_packet = payload_lenght;
+    node->total_header_lenght = 40;
+    //node->tamanho_total_packet = payload_lenght;
     node->tempo_vida = ttl;
     int cond_break_loop = 1;
-    int curr_index = 40 + ETH_HLEN;
+    int curr_index = 40 + offset_ethernet;
     while (cond_break_loop && cond_break_loop < 8){
         //printf("%d  %d\n",protocolo, curr_index);
         switch (protocolo){
@@ -152,53 +150,52 @@ void fill_ipv6(unsigned char *buffer, FullInternetPacket* node){
                 break;
 
             default:
-                printf("IPv6 unknown: %d\n",protocolo);
+                //printf("IPv6 unknown: %d\n",protocolo);
                 cond_break_loop=0;
                 node->protocolo_transporte = -1;//"Unknown");
                 break;
         }
-        node->ip_header_lenght = curr_index;
+        node->total_header_lenght = curr_index;
     }
 }
 
-void fill_ipv4(unsigned char *buffer, FullInternetPacket* node){
-    int ihl = ((int)(buffer[ETH_HLEN] & 0b00001111)) * 4;
+void fill_ipv4(unsigned char *buffer, FullInternetPacket* node, int offset_ethernet){
+    int ihl = ((int)(buffer[offset_ethernet] & 0b00001111)) * 4;
     //index = 1
-    int total_lenght = ((((uint16_t)buffer[ETH_HLEN+2])<<8) | buffer[ETH_HLEN+3]); 
+    //int total_lenght = ((((uint16_t)buffer[offset_ethernet+2])<<8) | buffer[offset_ethernet+3]);
     //index = 3
-    int time_to_live = buffer[ETH_HLEN+8];
+    int time_to_live = buffer[offset_ethernet+8];
     /*
     TIPO DE PROTOCOLO
     01 ICMP
     06 TCP
     17 UDP
     */
-    int protocolo = buffer[ETH_HLEN+9];
+    int protocolo = buffer[offset_ethernet+9];
     int ip_source_raw[4];
     // index = 11
     for (int i = 0; i < 4; i++){
-        ip_source_raw[i] = buffer[ETH_HLEN + 12+ i];
+        ip_source_raw[i] = buffer[offset_ethernet + 12+ i];
     }
     char ip_source[64];
     snprintf(ip_source, 64, "%d.%d.%d.%d", ip_source_raw[0],ip_source_raw[1],ip_source_raw[2],ip_source_raw[3]);
     int ip_dest_raw[4];
     // index = 15
     for (int i = 0; i < 4; i++){
-        ip_dest_raw[i] = buffer[ETH_HLEN + 16 + i];
+        ip_dest_raw[i] = buffer[offset_ethernet + 16 + i];
     }
     char ip_dest[64];
     snprintf(ip_dest, 64, "%d.%d.%d.%d", ip_dest_raw[0],ip_dest_raw[1],ip_dest_raw[2],ip_dest_raw[3]);
     strcpy(node->ip_destino, ip_dest);
     strcpy(node->ip_origem, ip_source);
-    node->ip_header_lenght = ihl; 
+    node->total_header_lenght = ihl + offset_ethernet;
     node->tempo_vida = time_to_live;
-    node->tamanho_total_packet = total_lenght;
     switch (protocolo){
         case 1:
             node->protocolo_transporte = 1;//"ICMP";
             break;
         case 5:
-            node->protocolo_transporte = 5;//"STREA");
+            node->protocolo_transporte = 5;//"STREAM");
             break;
         case 6:
             node->protocolo_transporte = 6;//"TCP")
@@ -207,28 +204,52 @@ void fill_ipv4(unsigned char *buffer, FullInternetPacket* node){
             node->protocolo_transporte = 17;//"UDP")
             break;
         default:
-            printf("IPv4 unknown: %d\n",protocolo);
-            node->protocolo_transporte = -1;//"Unknon");
+            //printf("IPv4 unknown: %d\n",protocolo);
+            node->protocolo_transporte = -1;//"Unknown");
             break;
     }
 }
 
-FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
+FullInternetPacket* fill_fullPacket_node(unsigned char *buffer, long int recvlen) {
     FullInternetPacket *packetNode = malloc(sizeof(FullInternetPacket));
+    if (recvlen<14) {
+        free(packetNode);
+        return NULL;
+    }
+    packetNode->tamanho_total_packet = recvlen;
     memset(packetNode, 0, sizeof(FullInternetPacket));
     char buffer_txt[MAX_SIZE];
     
     // --------- Layer de Acesso a Rede ---------
     memset(buffer_txt, 0, MAX_SIZE);
-    snprintf(buffer_txt,256,"%02x:%02x:%02x:%02x:%02x:%02x",buffer[0],buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
+    snprintf(buffer_txt,MAX_SIZE,"%02x:%02x:%02x:%02x:%02x:%02x",buffer[0],buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
     strncpy(packetNode->mac_destino,buffer_txt,MAX_SIZE);
     
     memset(buffer_txt, 0, MAX_SIZE);
-    snprintf(buffer_txt,256,"%02x:%02x:%02x:%02x:%02x:%02x",buffer[6],buffer[7], buffer[8], buffer[9], buffer[10], buffer[11]);
+    snprintf(buffer_txt,MAX_SIZE,"%02x:%02x:%02x:%02x:%02x:%02x",buffer[6],buffer[7], buffer[8], buffer[9], buffer[10], buffer[11]);
     strncpy(packetNode->mac_origem,buffer_txt,MAX_SIZE);
     int define_protocol;
     int ethtype = (((uint16_t)buffer[12]) << 8 | buffer[13]);
-    
+    int ethr_header_len = 14, offset = 0;
+    if (ethtype == 0x88a8) {
+        offset+=4;
+        if (recvlen < 14 + offset) {
+            free(packetNode);
+            return NULL;
+        }
+        ethr_header_len+=4;
+        ethtype = (((uint16_t)buffer[12 + offset]) << 8 | buffer[13 + offset]);
+    }
+    if (ethtype == 0x8100) {
+        packetNode->is_vlan = 0b1;
+        offset+=4;
+        if (recvlen < 14 + offset) {
+            free(packetNode);
+            return NULL;
+        }
+        ethr_header_len+=4;
+        ethtype = (((uint16_t)buffer[12 + offset]) << 8 | buffer[13 + offset]);
+    }
     switch (ethtype) {
         case ETH_P_IP:
             strcpy(packetNode->protocolo_ip, "IPv4");
@@ -247,7 +268,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
 
@@ -258,22 +279,9 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
-
-        case ETH_P_8021Q:
-            strcpy(packetNode->protocolo_ip, "VLAN (802.1)");
-            //TODO: implementar parsing de vlan
-            define_protocol = 5;
-            strcpy(packetNode->ip_origem, "Null");
-            strcpy(packetNode->ip_destino, "Null");
-            packetNode->protocolo_transporte = -1;
-            packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
-            packetNode->tamanho_total_packet = 0;
-            break;
-
         case ETH_P_MPLS_UC:
             strcpy(packetNode->protocolo_ip, "MPLS Unicast");
             define_protocol = 6;
@@ -281,7 +289,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
 
@@ -292,7 +300,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
 
   
@@ -305,7 +313,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
 
@@ -316,7 +324,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
 
@@ -327,7 +335,7 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
             strcpy(packetNode->ip_destino, "Null");
             packetNode->protocolo_transporte = -1;
             packetNode->tempo_vida = 0;
-            packetNode->ip_header_lenght = 0;
+            packetNode->total_header_lenght = 0;
             packetNode->tamanho_total_packet = 0;
             break;
     }
@@ -336,13 +344,29 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
     // --------- layer de Internet ---------
     int transport_offset = 0;
     if (define_protocol == 1){
-        fill_ipv4(buffer, packetNode);
-        transport_offset = 14 + packetNode->ip_header_lenght; //ip->ihl*4
-        switch ((int)buffer[ETH_HLEN+9]){
+        if (recvlen< ethr_header_len+ 20) {
+            free(packetNode);
+            return NULL;
+        }
+        fill_ipv4(buffer, packetNode, ethr_header_len);
+        if (packetNode->total_header_lenght < 20 + ethr_header_len || recvlen <  packetNode->total_header_lenght) {
+            free(packetNode);
+            return NULL;
+        }
+        transport_offset = packetNode->total_header_lenght; //ip->ihl*4
+        switch (packetNode->protocolo_transporte){
             case 6:
+                if (recvlen < transport_offset + 20) {
+                    free(packetNode);
+                    return NULL;
+                }
                 transport_offset += fill_tcp(buffer, transport_offset, packetNode);
                 break;
             case 17:
+                if (recvlen < transport_offset + 8) {
+                    free(packetNode);
+                    return NULL;
+                }
                 transport_offset += fill_udp(buffer, transport_offset, packetNode);
                 break;
             default:
@@ -358,18 +382,32 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
                 packetNode->tcp_urg = 0;
                 break;
         }
+        packetNode->total_header_lenght = transport_offset;
     }   
     if (define_protocol == 2){
-        fill_ipv6(buffer, packetNode);
-        transport_offset = 14 + packetNode->ip_header_lenght;
+        if (recvlen< ethr_header_len + 40) {
+            free(packetNode);
+            return NULL;
+        }
+        fill_ipv6(buffer, packetNode,ethr_header_len);
+        transport_offset = packetNode->total_header_lenght;
         switch (packetNode->protocolo_transporte){
             case 6:
+                if (recvlen < transport_offset + 20) {
+                    free(packetNode);
+                    return NULL;
+                }
                 transport_offset += fill_tcp(buffer, transport_offset, packetNode);
+
                 break;
             case 17:
+                if (recvlen < transport_offset + 8) {
+                    free(packetNode);
+                    return NULL;
+                }
                 transport_offset += fill_udp(buffer, transport_offset, packetNode);
                 break;
-            default:        
+            default:
                 packetNode->porta_destino = 0;
                 packetNode->porta_origem = 0;
                 packetNode->tcp_seq = 0;
@@ -382,10 +420,10 @@ FullInternetPacket* fill_fullPacket_node(unsigned char *buffer) {
                 packetNode->tcp_urg = 0;
                 break;
         }
+        packetNode->total_header_lenght = transport_offset;
     }
     char time[64];
     get_time(time,64);
     strcpy(packetNode->timestamp,time); 
     return packetNode;
-
 }
