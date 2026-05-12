@@ -53,7 +53,6 @@ void *routine_processing(void*arg) {
             free(node);
             free_item(&temp, &nmbr_itens);
             pthread_mutex_unlock(&mutex_processing);
-
         }
         else {
             node->tamanho_total_packet = temp->recvlen;
@@ -117,11 +116,10 @@ void *routine_payload(void*arg) {
             start_server(&socketfd_server, &socketConfig, &socketList, addr, prt);
             result = send(socketfd_server, json_request, strlen(json_request), 0);
         }
-        char response[4096];
-        ssize_t n = recv(socketfd_server, response, sizeof(response) - 1, 0);
-        if (n < 0) {
-            perror("recv");
-        }
+        char time[MAX_SIZE];
+        get_time(time, MAX_SIZE);
+        printf("[%s] Envio da requisicao ao servidor completo! Aguardando proximo payload...\n",time);
+
         //recv(socketfd_server, NULL, 0, 0);
         free(json_payload);
         free(json_request);
