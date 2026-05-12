@@ -37,8 +37,8 @@ Durante o consumo da fila de estruturas, a Thread 3 bloqueia temporariamente a T
 - [x] Parsing de ARP
 - [x] Parsing de UDP
 - [x] Parsing de TCP
-- [ ] Tratar extension headers do IPv6
-- [ ] Melhorar validações de tamanho antes do parsing
+- [x] Tratar extension headers do IPv6
+- [x] Melhorar validações de tamanho antes do parsing
 
 ## Extração de dados
 
@@ -48,7 +48,7 @@ Durante o consumo da fila de estruturas, a Thread 3 bloqueia temporariamente a T
 - [x] Ignorar payload irrelevante
 - [x] Identificar aplicação por porta TCP/UDP
 - [x] Utilizar tabela local de serviços conhecidos
-- [ ] Melhorar identificação de protocolos de aplicação
+- [x] Melhorar identificação de protocolos de aplicação
 
 ## Eventos / Estruturas
 
@@ -58,32 +58,32 @@ Durante o consumo da fila de estruturas, a Thread 3 bloqueia temporariamente a T
 - [x] Adicionar dados de camada de transporte
 - [x] Adicionar dados de aplicação quando disponíveis
 - [ ] Adicionar identificação da máquina
-- [ ] Padronizar campos opcionais
-- [ ] Revisar nomes finais do payload enviado ao backend
+- [x] Padronizar campos opcionais
+- [x] Revisar nomes finais do payload enviado ao backend
 
 ## Pipeline multi-thread
 
-- [ ] Criar Thread 1 para captura com `recvfrom()`
-- [ ] Criar Thread 2 para parsing dos pacotes
-- [ ] Criar Thread 3 para montagem de JSON e envio HTTP
-- [ ] Implementar fila de pacotes brutos
-- [ ] Implementar fila de `FullNetworkPacket`
-- [ ] Adicionar mutex na fila de pacotes brutos
-- [ ] Adicionar mutex na fila de estruturas
-- [ ] Definir estratégia de consumo contínuo da Thread 2
-- [ ] Definir janela de envio da Thread 3
-- [ ] Garantir liberação correta de memória entre as threads
+- [x] Criar Thread 1 para captura com `recvfrom()`
+- [x] Criar Thread 2 para parsing dos pacotes
+- [x] Criar Thread 3 para montagem de JSON e envio HTTP
+- [x] Implementar fila de pacotes brutos
+- [x] Implementar fila de `FullNetworkPacket`
+- [x] Adicionar mutex na fila de pacotes brutos
+- [x] Adicionar mutex na fila de estruturas
+- [x] Definir estratégia de consumo contínuo da Thread 2
+- [x] Definir janela de envio da Thread 3
+- [x] Garantir liberação correta de memória entre as threads
 
 ## Buffer / Filas
 
-- [ ] Implementar buffer em memória para pacotes brutos
-- [ ] Implementar fila em memória para structs processadas
-- [ ] Definir janela de envio
-- [ ] Definir limite máximo da fila bruta
-- [ ] Definir limite máximo da fila de structs
-- [ ] Implementar descarte seguro
+- [x] Implementar buffer em memória para pacotes brutos
+- [x] Implementar fila em memória para structs processadas
+- [x] Definir janela de envio
+- [x] Definir limite máximo da fila bruta
+- [x] Definir limite máximo da fila de structs
+- [x] Implementar descarte seguro
 - [ ] Contabilizar pacotes descartados
-- [ ] Evitar crescimento infinito de memória
+- [x] Evitar crescimento infinito de memória
 
 ## Serialização
 
@@ -92,9 +92,9 @@ Durante o consumo da fila de estruturas, a Thread 3 bloqueia temporariamente a T
 - [x] Estruturar payload em lote
 - [x] Adicionar HMAC ao envio
 - [x] Adicionar timestamp da requisição
-- [ ] Integrar serialização com a fila de structs
-- [ ] Garantir limpeza das structs após serialização
-- [ ] Validar payload final enviado ao backend
+- [x] Integrar serialização com a fila de structs
+- [x] Garantir limpeza das structs após serialização
+- [x] Validar payload final enviado ao backend
 
 ## Comunicação
 
@@ -105,17 +105,17 @@ Durante o consumo da fila de estruturas, a Thread 3 bloqueia temporariamente a T
 - [x] Adicionar autenticação por HMAC
 - [ ] Ler resposta do backend
 - [ ] Tratar códigos HTTP de erro
-- [ ] Separar falha de conexão de falha de aplicação
-- [ ] Ajustar timeout de envio
+- [x] Separar falha de conexão de falha de aplicação
+- [x] Ajustar timeout de envio
 
 ## Resiliência
 
 - [x] Tratar falhas de conexão
 - [x] Implementar retry simples
-- [ ] Implementar política de descarte
-- [ ] Definir comportamento quando o backend estiver fora
+- [x] Implementar política de descarte
+- [x] Definir comportamento quando o backend estiver fora
 - [ ] Definir limite de tentativas por lote
-- [ ] Evitar bloqueio da captura por falha no envio
+- [x] Evitar bloqueio da captura por falha no envio
 - [ ] Registrar falhas internas do client
 
 ## Métricas internas planejadas
