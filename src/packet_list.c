@@ -15,7 +15,7 @@ void free_packet(PacketList **inicio, int *itens_quantity) {
     }
 }
 void insert_packet_node_on_list(PacketList **inicio, PacketList **final, FullInternetPacket **pkt, int *packet_nmbr){
-    PacketList *new_node = (PacketList*)malloc(sizeof(PacketList));
+    PacketList *new_node = malloc(sizeof(PacketList));
     new_node->packet = *pkt;
     new_node->next = NULL;
     if (*inicio == NULL){

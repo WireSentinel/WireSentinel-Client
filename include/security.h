@@ -8,4 +8,7 @@ void get_file_full(char **fullFile, int line_nmbr);
 int confirm_if_file_exists();
 void get_file_path(char **path);
 int create_security_file(char* key, char* url, char* port);
+int check_if_UUID_exists();
+void get_UUID(char** uuid);
+void set_UUID(char* uuid);
 #endif

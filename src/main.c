@@ -7,12 +7,12 @@
 #include <sys/socket.h>
 #include <net/ethernet.h>
 #include <pthread.h>
+#include <openssl/hmac.h>
 #include "buffer_list.h"
 #include "misc.h"
 #include "packet_service.h"
 #include "packet_list.h"
 #include "security.h"
-#include <pthread.h>
 #include "jsonparser.h"
 
 #define MAX_ITENS 400
@@ -27,6 +27,7 @@ int test = 0;
 int nmbr_itens = 0;
 int nmbr_packets = 0;
 char tempo[MAX_SIZE];
+char *UUID;
 #include <signal.h>
 
 Buffer_List *inicio_buffer = NULL;
@@ -72,6 +73,7 @@ void start_server(int * socketfd, struct addrinfo *socketConfig, struct addrinfo
     char time[MAX_SIZE];
     getaddrinfo(address, port, socketConfig, socketList);
     *socketfd   = socket((*socketList)->ai_family,(*socketList)->ai_socktype,(*socketList)->ai_protocol);
+
     while (connect(*socketfd, (*socketList)->ai_addr, (*socketList)->ai_addrlen) != 0){
         *socketfd = socket((*socketList)->ai_family,(*socketList)->ai_socktype,(*socketList)->ai_protocol);
         get_time(time, MAX_SIZE);
@@ -79,11 +81,53 @@ void start_server(int * socketfd, struct addrinfo *socketConfig, struct addrinfo
         sleep(5);
     }
     //get_time_ptr(&time);
+
     get_time(time, MAX_SIZE);
     printf("[%s] Conectado com o servidor (> %s:%s <) iniciando transmissão de dados...\n", time, address, port);
-
+}
+void case_not_ok( char* addr, char* prt, char* key, int socketfd_server, int* code, char** uuid) {
+    char buffer[2048], time[30];
+    char json[512];
+    unsigned char digest[HMAC_SHA256_SIZE];
+    unsigned int digest_len = 0;
+    get_time(time, 30);
+    get_file_key(&key);
+    //printf("%s\n", key);
+    snprintf(json, 512, "{\r\n  X-WireSentinel-Timestamp: %s,\r\n  User-Agent: %s\r\n}", time, "WireSentinel-Agent/1.0");
+    HMAC(EVP_sha256(), key, (int)strlen(key), (const unsigned char *) json, (int)strlen(json), digest,&digest_len);
+    char digest_hex[65];
+    for (int i = 0; i < 32; i++) {
+        sprintf(&digest_hex[i * 2], "%02x", digest[i]);
+    }
+    digest_hex[64] = '\0';
+    snprintf(buffer, 2048,
+        "GET /api/register HTTP/1.1\r\n"
+        "Host: %s:%s\r\n"
+        "X-WireSentinel-Timestamp: %s\r\n"
+        "X-WireSentinel-Credential: %s\r\n"
+        "User-Agent: WireSentinel-Agent/1.0\r\n\r\n",
+        addr, prt, time, digest_hex
+    );
+    //free(key);
+    //printf("test: %d\n", debug++);
+    ssize_t len = send(socketfd_server, buffer, strlen(buffer), 0);
+    //printf("test: %d\n", debug++);
+    if (len<0) {
+        printf("[%s] Erro! falha ao enviar a requisição a chave UUID do servidor... verifique se está tudo certo com o servidor e tente novamente...\n", time);
+        exit(1);
+    }
+    char http_response_buffer[2048];
+    recv(socketfd_server,http_response_buffer, 2048,0);
+    *code = extract_status_code(http_response_buffer);
+    if (*code != 200) {
+        printf("algo de errado, codigo de resposta http: %d", *code);
+        exit(1);
+    }
+    extract_uuid(http_response_buffer, uuid);
+    set_UUID(*uuid);
 }
 void *routine_payload(void*arg) {
+    int debug = 0;
     (void) arg;
     char *addr, *prt, urlbuffer[2048];
 
@@ -91,9 +135,74 @@ void *routine_payload(void*arg) {
     get_file_prt(&prt);
     snprintf(urlbuffer, 2048, "%s:%s", addr, prt);
     int socketfd_server;
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
     struct addrinfo socketConfig;
     struct addrinfo *socketList;
     start_server(&socketfd_server, &socketConfig, &socketList, addr, prt);
+    setsockopt(socketfd_server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    char time[30], *key;
+    get_time(time, 30);
+    get_file_key(&key);
+    char json[512];
+    unsigned char digest[HMAC_SHA256_SIZE];
+    unsigned int digest_len = 0;
+    snprintf(json, 512, "{\r\n  X-WireSentinel-Timestamp: %s,\r\n  User-Agent: %s\r\n}", time, "WireSentinel-Agent/1.0");
+    HMAC(EVP_sha256(), key, (int)strlen(key), (const unsigned char *) json, (int)strlen(json), digest,&digest_len);
+    char digest_hex[65], *uuid = NULL;
+    int code;
+    for (int i = 0; i < 32; i++) {
+        sprintf(&digest_hex[i * 2], "%02x", digest[i]);
+    }
+    digest_hex[64] = '\0';
+    printf("teste\n"); // 1
+    if (check_if_UUID_exists()) {
+        get_UUID(&uuid);
+        char buffer[2048];
+        printf("teste\n"); // 2
+        snprintf(buffer, 2048,
+            "GET /api/client_auth HTTP/1.1\r\n"
+            "Host: %s:%s\r\n"
+            "X-WireSentinel-Timestamp: %s\r\n"
+            "X-WireSentinel-Credential: %s\r\n"
+            "X-WireSentinel-UUID: %s\r\n"
+            "User-Agent: WireSentinel-Agent/1.0\r\n\r\n",
+            addr, prt, time, digest_hex, uuid
+        );
+        //printf("test: %d\n", debug++);
+        printf("teste\n"); // 3
+        ssize_t len = send(socketfd_server, buffer, strlen(buffer), 0);
+        //printf("test: %d\n", debug++);
+        if (len<0) {
+            printf("[%s] Erro! falha ao enviar a requisição a chave UUID do servidor... verifique se está tudo certo com o servidor e tente novamente...\n", time);
+            exit(1);
+        }
+        printf("teste\n"); // 4
+        char http_response_buffer[2048];
+        recv(socketfd_server,http_response_buffer, 2048,0);
+        code = extract_status_code(http_response_buffer);
+        printf("teste\n"); // 5
+        //printf("test: %d\n", debug++);
+        printf("%d\n",code);
+        if (code == 200) {
+            printf("teste\n"); // 6
+            get_UUID(&uuid);
+        }
+        else {
+            printf("teste\n");// 6
+            case_not_ok(addr, prt, key, socketfd_server, &code, &uuid);
+            //set_UUID(uuid);
+        }
+        //printf("test: %d\n", debug++);
+        free(key);
+    }
+    else {
+        case_not_ok(addr, prt, key, socketfd_server, &code, &uuid);
+        free(key);
+    }
+    int contador_loop_reset_uuid = 0;
+    char recv_buffer[2048];
     while (1){
         pthread_mutex_lock(&mutex_processing);
         while (inicio_packet==NULL) {
@@ -108,15 +217,28 @@ void *routine_payload(void*arg) {
         final_packet = NULL;
         pthread_mutex_unlock(&mutex_processing);
 
-        generate_request(urlbuffer, json_payload, &json_request);
-
+        generate_request(urlbuffer, json_payload, &json_request, uuid);
         ssize_t result = send(socketfd_server, json_request, strlen(json_request), 0);
         while (result == -1) {
             close(socketfd_server);
             start_server(&socketfd_server, &socketConfig, &socketList, addr, prt);
             result = send(socketfd_server, json_request, strlen(json_request), 0);
         }
-        char time[MAX_SIZE];
+        result = recv(socketfd_server, recv_buffer, 2048, 0);
+        while (result == -1) {
+            close(socketfd_server);
+            start_server(&socketfd_server, &socketConfig, &socketList, addr, prt);
+            result = send(socketfd_server, json_request, strlen(json_request), 0);
+            if (result == -1) continue;
+            result = recv(socketfd_server, recv_buffer, 2048, 0);
+        }
+        if (extract_status_code(recv_buffer) != 200) {
+            char *key = NULL;
+            get_file_key(&key);
+            case_not_ok(addr, prt,  key, socketfd_server, &code, &uuid);
+            free(key);
+        }
+        contador_loop_reset_uuid = 0;
         get_time(time, MAX_SIZE);
         printf("[%s] Envio da requisicao ao servidor completo! Aguardando proximo payload...\n",time);
 
@@ -129,8 +251,8 @@ void *routine_payload(void*arg) {
     }
 }
 
-int main(){
 
+int main(){
     unsigned char buffer[65535];
     signal(SIGPIPE, SIG_IGN);
     pthread_mutex_init(&mutex_processing, NULL);
@@ -168,23 +290,11 @@ int main(){
             pthread_mutex_lock(&mutex_processing);
             test = 0;
             pthread_mutex_unlock(&mutex_processing);
+
             //printf("iten quantity: %d\n", nmbr_itens);
+
             pthread_cond_signal(&cond_payload);
             secs = time(NULL);
         }
     }
-    //generate_json_payload(inicio_packet, &json_payload);
-    // generate_json_payload(inicio, &json_payload);
-    //printf("%s", json_payload);
-    // char*addr, *prt, urlbuffer[2048];
-    // get_file_url(&addr);
-    // get_file_prt(&prt);
-    // snprintf(urlbuffer, 2048, "%s:%s", addr, prt);
-    // generate_request(urlbuffer, json_payload, &json_request);
-    // send(socketfd_server, json_request, strlen(json_request), 0);
-    // //getchar();
-    // close(socketfd);
-    // free_list(&inicio_packet);
-    // free(json_payload);
-    // //return 0;
 }

@@ -16,8 +16,21 @@
 */
 void get_file_path(char** path_og){
     *path_og = malloc(sizeof(char)*100);
-    if(strcmp(PATH, "") == 0) {strcpy(*path_og, ".security");}
-    else{strcat(*path_og, ".security");};
+    if(strcmp(PATH, "") == 0) {
+        strcpy(*path_og, ".security");
+    }
+    else {
+        strcat(*path_og, ".security");
+    };
+}
+void get_file_path_uuid(char** path_og){
+    *path_og = malloc(sizeof(char)*100);
+    if(strcmp(PATH, "") == 0) {
+        strcpy(*path_og, ".uuid");
+    }
+    else {
+        strcat(*path_og, ".uuid");
+    };
 }
 
 int create_security_file(char* key, char* url, char* port){
@@ -160,3 +173,45 @@ int file_greeter(){
     return 0;
 }
 
+int check_if_UUID_exists() {
+    char* path;
+    get_file_path_uuid(&path);
+    FILE *fl = fopen(path,"r");
+    if (fl == NULL){
+        return 0;
+    }
+    free(path);
+    rewind(fl);
+    fclose(fl);
+    return 1;
+}
+
+// if uuid exists, returns char sequence, else returns NULL
+void get_UUID(char** uuid) {
+    if (check_if_UUID_exists()) {
+        char *buffer = malloc(sizeof(char)*2048);
+        char* path;
+        get_file_path_uuid(&path);
+        FILE *fl = fopen(path,"r");
+        fgets(buffer,2048, fl);
+        free(path);
+        rewind(fl);
+        fclose(fl);
+        buffer[strlen(buffer)-1] = '\0';
+        *uuid = strdup(buffer + 5);
+        free(buffer);
+    }
+    else
+        *uuid = NULL;
+}
+
+void set_UUID(char* uuid) {
+    char buffer[2048]= "";
+    snprintf(buffer, 2048, "UUID=%s\n", uuid);
+    char* path;
+    get_file_path_uuid(&path);
+    FILE* fl = fopen(path, "w");
+    fputs(buffer,fl);
+    fclose(fl);
+    free(path);
+}

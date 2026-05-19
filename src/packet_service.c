@@ -45,6 +45,7 @@ int fill_tcp(unsigned char *buffer, int offset, FullInternetPacket* node){
     node->porta_origem = source_port;
     node->tcp_seq = (long int) seq_nbr;
     node->tcp_ack_seq = (long int) ack_nbr;
+
     node->tcp_fin = ((buffer[offset+13] & 0b00000001))? 1 : 0;
     node->tcp_syn = ((buffer[offset+13] & 0b00000010))? 1 : 0;
     node->tcp_rst = ((buffer[offset+13] & 0b00000100))? 1 : 0;
@@ -53,6 +54,7 @@ int fill_tcp(unsigned char *buffer, int offset, FullInternetPacket* node){
     node->tcp_urg = ((buffer[offset+13] & 0b00100000))? 1 : 0;
     node->tcp_ece = ((buffer[offset+13] & 0b01000000))? 1 : 0;
     node->tcp_cwr = ((buffer[offset+13] & 0b10000000))? 1 : 0;
+
     int lenght = ((buffer[offset+12])>>4) *4;
     return lenght;
 }
